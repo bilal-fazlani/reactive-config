@@ -46,6 +46,7 @@ lazy val `reactive-config-server` = project
       Libs.`borer-core`,
       Libs.`borer-derivation`,
       Libs.`borer-akka`,
+      Libs.slf4j,
       TestLibs.munit % Test
     )
   )
