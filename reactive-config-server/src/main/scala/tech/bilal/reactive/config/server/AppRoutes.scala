@@ -16,27 +16,27 @@ import tech.bilal.reactive.config.server.webhook.models.PushHook
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 
-case class ConfigParams(svc: String, env: String)
+//case class ConfigParams(svc: String, env: String)
 
-sealed trait Commands
-case class AddAll(all: Set[ConfigParams], replyTo: ActorRef[Done])
-    extends Commands
-case class Exists(configParams: ConfigParams, replyTo: ActorRef[Boolean])
-    extends Commands
+class ConcurrentDataActor[A] {
+  sealed trait ConcurrentDataCommands
+  case class AddAll(all: Set[A], replyTo: ActorRef[Done])
+      extends ConcurrentDataCommands
+  case class Exists(configParams: A, replyTo: ActorRef[Boolean])
+      extends ConcurrentDataCommands
 
-class RegistrationActorProxy(actorRef: ActorRef[Commands])(implicit
-    timeout: Timeout,
-    scheduler: Scheduler
-) {
-  def addAll(configs: Set[ConfigParams]): Future[Done] =
-    actorRef ? (AddAll(configs, _))
-  def exists(config: ConfigParams): Future[Boolean] =
-    actorRef ? (Exists(config, _))
-}
+  class ConcurrentData(actorRef: ActorRef[ConcurrentDataCommands])(implicit
+      timeout: Timeout,
+      scheduler: Scheduler
+  ) {
+    def addAll(configs: Set[A]): Future[Done] =
+      actorRef ? (AddAll(configs, _))
+    def exists(config: A): Future[Boolean] =
+      actorRef ? (Exists(config, _))
+  }
 
-object RegistrationActor {
-  def beh(state: Set[ConfigParams]): Behavior[Commands] =
-    Behaviors.receiveMessage[Commands] {
+  def beh(state: Set[A]): Behavior[ConcurrentDataCommands] =
+    Behaviors.receiveMessage[ConcurrentDataCommands] {
       case AddAll(allConfigParams, replyTo) =>
         replyTo ! Done
         beh(allConfigParams)
@@ -45,10 +45,20 @@ object RegistrationActor {
         Behaviors.same
     }
 
-  def start(actorSystem: ActorSystem[Command]): Future[ActorRef[Commands]] = {
+  def start(implicit
+      actorSystem: ActorSystem[Command]
+  ): Future[ConcurrentData] = {
     implicit val scheduler: Scheduler = actorSystem.scheduler
     implicit val timeout: Timeout = Timeout(2.seconds)
-    actorSystem ? (Spawn(beh(Set.empty), "registration-actor", Props.empty, _))
+    import actorSystem.executionContext
+    val actorRefF: Future[ActorRef[ConcurrentDataCommands]] =
+      actorSystem ? (Spawn[ConcurrentDataCommands](
+        beh(Set.empty[A]),
+        "registration-actor",
+        Props.empty,
+        _
+      ))
+    actorRefF.map(actorRef => new ConcurrentData(actorRef))
   }
 }
 
