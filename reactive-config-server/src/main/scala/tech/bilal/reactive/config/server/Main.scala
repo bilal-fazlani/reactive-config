@@ -1,38 +1,29 @@
 package tech.bilal.reactive.config.server
 
-import java.nio.file.Path
-
-import akka.actor.typed.ActorSystem
-import akka.actor.typed.scaladsl.Behaviors
-import akka.stream.scaladsl.FileIO
-import akka.util.ByteString
-import com.typesafe.config.ConfigFactory
-
+import akka.actor.typed.{ActorSystem, SpawnProtocol}
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.server.Directives
+import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{Await, Future}
 
-object Main extends App {
-  implicit val actorSystem: ActorSystem[_] =
-    ActorSystem(Behaviors.empty, "main")
-  import actorSystem.executionContext
+object Main extends App with Directives {
+  val defaultPort = 8080
 
-  val fileRootDir = "/Users/bilal/projects/scala/config-sample/"
-  val base = fileRootDir + "service1.conf"
-  val dev = fileRootDir + "service1-dev.conf"
+  val port = sys.env
+    .get("SERVER_PORT")
+    .flatMap(_.toIntOption)
+    .getOrElse(defaultPort)
 
-  val baseConfig = ConfigFactory.parseString(readFile(base))
-  val devConfig = ConfigFactory.parseString(readFile(dev))
+  implicit val actorSystem = ActorSystem(SpawnProtocol(), "main")
 
-  val c = devConfig.withFallback(baseConfig).resolve()
+  val routes = new AppRoutes().routes
 
-  println(c)
+  val binding = Await.result(
+    Http()
+      .newServerAt("0.0.0.0", port)
+      .bind(routes),
+    5.seconds
+  )
 
-  def readFile(path: String): String =
-    block(
-      FileIO
-        .fromPath(Path.of(path))
-        .runFold(ByteString.empty)(_ ++ _)
-        .map(_.utf8String)
-    )
-  def block[A](f: Future[A]) = Await.result(f, 10.seconds)
+  println(s"server started at http://localhost:$port")
 }
