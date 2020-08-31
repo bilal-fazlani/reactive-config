@@ -33,7 +33,7 @@ lazy val `reactive-config-root` = project
   .settings(
     name := "reactive-config-root"
   )
-  .aggregate(`reactive-config-server`)
+  .aggregate(`reactive-config-server`, `sample-server`)
 
 lazy val `reactive-config-server` = project
   .in(file("./reactive-config-server"))
@@ -48,5 +48,18 @@ lazy val `reactive-config-server` = project
       Libs.`borer-akka`,
       Libs.slf4j,
       TestLibs.munit % Test
+    )
+  )
+
+lazy val `sample-server` = project
+  .in(file("./sample-server"))
+  .settings(
+    name := "sample-server",
+    libraryDependencies ++= Seq(
+      Libs.pureconfig,
+      Libs.`akka-actor-typed`,
+      Libs.`akka-stream`,
+      Libs.`akka-http`,
+      Libs.slf4j
     )
   )

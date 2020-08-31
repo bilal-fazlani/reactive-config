@@ -14,6 +14,7 @@ object Libs {
 
   //CONFIG
   lazy val `typesafe-config` = "com.typesafe" % "config" % "1.4.0"
+  lazy val pureconfig = "com.github.pureconfig" %% "pureconfig" % "0.13.0"
 
   //LOGGING
   lazy val slf4j = "org.slf4j" % "slf4j-simple" % "1.7.30"
