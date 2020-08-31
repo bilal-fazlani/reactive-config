@@ -1,5 +1,7 @@
 package tech.bilal.reactive.config.server.utils
 
+import java.util.UUID
+
 import akka.Done
 import akka.actor.typed.SpawnProtocol.{Command, Spawn}
 import akka.actor.typed.scaladsl.AskPattern.Askable
@@ -7,7 +9,7 @@ import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed._
 import akka.util.Timeout
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.DurationInt
 
 trait ConcurrentData[A] {
@@ -19,17 +21,19 @@ object ConcurrentData {
 
   def of[A](implicit
       actorSystem: ActorSystem[Command]
-  ): Future[ConcurrentData[A]] = {
+  ): ConcurrentData[A] = {
 
-    class ConcurrentDataImpl(actorRef: ActorRef[ConcurrentDataCommands])(
-        implicit
+    class ConcurrentDataImpl(
+        actorRefF: Future[ActorRef[ConcurrentDataCommands]]
+    )(implicit
         timeout: Timeout,
-        scheduler: Scheduler
+        scheduler: Scheduler,
+        executionContext: ExecutionContext
     ) extends ConcurrentData[A] {
       def addAll(configs: Set[A]): Future[Done] =
-        actorRef ? (AddAll(configs, _))
+        actorRefF.flatMap(_ ? (AddAll(configs, _)))
       def exists(config: A): Future[Boolean] =
-        actorRef ? (Exists(config, _))
+        actorRefF.flatMap(_ ? (Exists(config, _)))
     }
 
     sealed trait ConcurrentDataCommands
@@ -54,10 +58,10 @@ object ConcurrentData {
     val actorRefF: Future[ActorRef[ConcurrentDataCommands]] =
       actorSystem ? (Spawn[ConcurrentDataCommands](
         beh(Set.empty[A]),
-        "registration-actor",
+        UUID.randomUUID().toString,
         Props.empty,
         _
       ))
-    actorRefF.map(actorRef => new ConcurrentDataImpl(actorRef))
+    new ConcurrentDataImpl(actorRefF)
   }
 }

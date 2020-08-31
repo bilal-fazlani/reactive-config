@@ -10,14 +10,13 @@ import io.bullet.borer.compat.akkaHttp._
 import tech.bilal.reactive.config.server.utils.ConcurrentData
 import tech.bilal.reactive.config.server.webhook.models.PushHook
 
-import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 
 case class ConfigParams(svc: String, env: String)
 
 class AppRoutes(implicit actorSystem: ActorSystem[Command]) extends Directives {
 
-  val concurrentData: Future[ConcurrentData[ConfigParams]] =
+  val concurrentData: ConcurrentData[ConfigParams] =
     ConcurrentData.of[ConfigParams]
 
   val routes: Route =
