@@ -1,2 +1,2 @@
-GET /config HTTP/1.1
+GET /config?service-name=sample-service&environment=dev
 Host: localhost:8080
