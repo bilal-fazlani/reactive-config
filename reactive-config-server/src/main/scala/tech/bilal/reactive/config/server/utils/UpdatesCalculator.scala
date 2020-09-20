@@ -12,7 +12,7 @@ import tech.bilal.reactive.config.server.models.{
 
 import scala.util.matching.Regex
 
-object Tmp {
+object UpdatesCalculator {
   def updates(
       filePaths: Set[String],
       registeredServices: Set[RegisteredService]

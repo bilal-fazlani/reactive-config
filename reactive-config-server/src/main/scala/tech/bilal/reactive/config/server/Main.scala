@@ -1,12 +1,13 @@
 package tech.bilal.reactive.config.server
 
+import akka.actor.typed.SpawnProtocol.Command
 import akka.actor.typed.{ActorSystem, SpawnProtocol}
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.server.Directives
+
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
-object Main extends App with Directives {
+object Main extends App {
   val defaultPort = 8080
 
   val port = sys.env
@@ -14,7 +15,8 @@ object Main extends App with Directives {
     .flatMap(_.toIntOption)
     .getOrElse(defaultPort)
 
-  implicit val actorSystem = ActorSystem(SpawnProtocol(), "main")
+  implicit val actorSystem: ActorSystem[Command] =
+    ActorSystem(SpawnProtocol(), "main")
 
   val routes = new AppRoutes().routes
 

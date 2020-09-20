@@ -3,7 +3,7 @@ package tech.bilal.reactive.config.server
 import akka.actor.typed.ActorSystem
 import akka.actor.typed.SpawnProtocol.Command
 import akka.http.scaladsl.marshalling.sse.EventStreamMarshalling._
-import akka.http.scaladsl.model.StatusCode
+import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.model.sse.ServerSentEvent
 import akka.http.scaladsl.server.{Directives, Route}
 import akka.stream.scaladsl.Source
@@ -21,20 +21,19 @@ class AppRoutes(implicit actorSystem: ActorSystem[Command]) extends Directives {
     ConcurrentData.of[RegisteredService]
 
   val routes: Route =
-    (get & path("config") & parameter("service-name", "environment")) {
-      (service, env) =>
-        onComplete(registeredServices.exists(RegisteredService(service, env))) {
-          case Success(true) =>
-            complete(
-              Source
-                .fromIterator(() => Iterator.from(1))
-                .map(x => ServerSentEvent(s"Event: ${x.toString}"))
-                .throttle(1, 1.second)
-                .take(10)
-            )
-          case Success(false)     => complete(StatusCode.int2StatusCode(404))
-          case Failure(exception) => throw exception
-        }
+    (get & path("config" / Segment / Segment)) { (service, env) =>
+      onComplete(registeredServices.exists(RegisteredService(service, env))) {
+        case Success(true) =>
+          complete(
+            Source
+              .fromIterator(() => Iterator.from(1))
+              .map(x => ServerSentEvent(s"Event: ${x.toString}"))
+              .throttle(1, 1.second)
+              .take(10)
+          )
+        case Success(false)     => complete(StatusCodes.NotFound)
+        case Failure(exception) => throw exception
+      }
 
     } ~ (post & path("github")) {
       entity(as[PushHook]) { hook =>
